@@ -75,6 +75,10 @@ class SaladBuilder extends Component {
         this.setState({purchasing: false});
     }
 
+    purchaseContinueHandler = () => {
+        alert("you countinue!");
+    }
+
     render () {
         const disabledInfo = {
             ...this.state.ingredients
@@ -85,7 +89,12 @@ class SaladBuilder extends Component {
         return (
             <Aux>
                 <Model show ={this.state.purchasing} modelClosed = {this.purchaseCancelHandler}>
-                    <OrderSummary ingredients = {this.state.ingredients}/>
+                    <OrderSummary 
+                        ingredients = {this.state.ingredients}
+                        price = {this.state.totalPrice}
+                        purchaseCanceled = {this.purchaseCancelHandler}
+                        purchaseContinued= {this.purchaseContinueHandler}/>
+
                 </Model>
                 <Salad ingredients = {this.state.ingredients}/>
                 <BuildControls
