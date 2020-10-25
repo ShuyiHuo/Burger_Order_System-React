@@ -4,6 +4,9 @@ import Salad from '../../components/Burger/Burger';
 import BuildControls from '../../components/Burger/BurgerControls/BurgerControls';
 import Model from '../../components/UI/Model/Model';
 import OrderSummary from '../../components/Burger/OrderSummary/OrderSummary';
+import axios from '../../axios-oders';
+import Spinner from '../../components/UI/Spinner/Spinner';
+import errorHandler from '../../components/Error/errorHandler';
 
 const INGREDIENT_PRICES = {
     salad: 0.5,
@@ -16,17 +19,25 @@ class SaladBuilder extends Component {
     
 
     state = {
-        ingredients: {
-            salad:0,
-            bacon:0,
-            cheese:0,
-            meat: 0
-        },
+        ingredients: null,
 
         totalPrice: 4,
         purchasable: false,
-        purchasing: false
+        purchasing: false,
+        loading: false,
+        error: false
     }
+    componentDidMount () {
+        axios.get('https://my-app-d91a6.firebaseio.com/ingredients.json')
+            .then( response => {
+                this.setState( { ingredients: response.data } );
+            })
+            .catch(error => {
+                this.setState({error: true})
+            });
+    }
+
+    
     updatePurchaseState(ingredients){
         
         const sum = Object.keys(ingredients)
@@ -76,7 +87,32 @@ class SaladBuilder extends Component {
     }
 
     purchaseContinueHandler = () => {
-        alert("you countinue!");
+        //add url here
+        //alert("you countinue!");
+        this.setState({loading: true});
+        const order = {
+            ingredients: this.state.ingredients,
+            price: this.state.totalPrice,
+            customer: {
+                name: 'Zoe',
+                address:{
+                    street: '111',
+                    zipcode: '02215',
+                    country: 'USA'
+                },
+                email: 'xxx@gmail.com'
+
+            },
+            deliverMethod: 'to go'
+        }
+        axios.post('/orders.json',order)
+            .then(response => {
+                this.setState({loading: false, purchasing: false});
+            })
+            .catch(error => {
+                this.setState({loading: false,purchasing: false});
+            });
+
     }
 
     render () {
@@ -86,29 +122,51 @@ class SaladBuilder extends Component {
         for(let key in disabledInfo){
             disabledInfo[key] = disabledInfo[key] <= 0
         }
+        
+        let oderSummary = null;
+
+   
+        let burger = this.state.error ? <p>Ingredients can't be loaded!</p> : <Spinner />;
+        if(this.state.ingredients){
+            burger = (
+                <Aux>
+                    <Salad ingredients = {this.state.ingredients}/>
+                    <BuildControls
+                        ingredientAdded = {this.addIngreedientHandler}
+                        ingredientRemoved = {this.removeIngreedientHandler}
+                        disabled = {disabledInfo}
+                        purchasable = {this.state.purchasable}
+                        ordered = {this.purchaseHandler}
+                        price = {this.state.totalPrice}/>
+                </Aux>
+                );
+                oderSummary = <OrderSummary 
+                    ingredients = {this.state.ingredients}
+                    price = {this.state.totalPrice}
+                    purchaseCanceled = {this.purchaseCancelHandler}
+                    purchaseContinued= {this.purchaseContinueHandler}/>;
+
+    
+        }
+
+        if(this.state.loading){
+            oderSummary = <Spinner/>
+        }
+
+
+        
+
         return (
             <Aux>
                 <Model show ={this.state.purchasing} modelClosed = {this.purchaseCancelHandler}>
-                    <OrderSummary 
-                        ingredients = {this.state.ingredients}
-                        price = {this.state.totalPrice}
-                        purchaseCanceled = {this.purchaseCancelHandler}
-                        purchaseContinued= {this.purchaseContinueHandler}/>
+                    {oderSummary}
 
                 </Model>
-                <Salad ingredients = {this.state.ingredients}/>
-                <BuildControls
-                    ingredientAdded = {this.addIngreedientHandler}
-                    ingredientRemoved = {this.removeIngreedientHandler}
-                    disabled = {disabledInfo}
-                    purchasable = {this.state.purchasable}
-                    ordered = {this.purchaseHandler}
-                    price = {this.state.totalPrice}/>
-
+                {burger}
             </Aux>
             
         );
     }
 
 }
-export default SaladBuilder;
+export default errorHandler(SaladBuilder, axios);
